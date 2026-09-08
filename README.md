@@ -33,6 +33,10 @@ A Streamlit and Jupyter project that uses Python, LangGraph, OpenAI, You.com Sea
 
 5. Open the localhost URL printed by Streamlit, enter a target company and run the research.
 
+The app discovers the checkout root automatically. It works when launched directly from
+`streamlit_app.py` and when the notebook launches its generated copy under `.research_runs/`.
+Keep `competitor_analysis.ipynb` in the repository root because it contains the shared workflow backend.
+
 The notebook contains the same workflow with step-by-step diagrams and logs:
 
 ```powershell

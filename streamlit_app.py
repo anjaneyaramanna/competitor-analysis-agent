@@ -6,11 +6,23 @@ import os
 import streamlit as st
 from dotenv import load_dotenv
 
-PROJECT_DIR = Path(__file__).resolve().parent
+def find_project_dir(start):
+    """Find the checkout root when launched from the root or .research_runs."""
+    start = Path(start).resolve()
+    for candidate in (start, *start.parents):
+        if (candidate / 'competitor_analysis.ipynb').is_file():
+            return candidate
+    searched = ' -> '.join(str(path) for path in (start, *start.parents))
+    raise RuntimeError(
+        'Could not locate competitor_analysis.ipynb. Keep streamlit_app.py and the notebook '
+        f'in the same checked-out project. Searched: {searched}'
+    )
+
+PROJECT_DIR = find_project_dir(Path(__file__).resolve().parent)
 DATA = PROJECT_DIR / '.research_runs'
 NOTEBOOK_PATH = PROJECT_DIR / 'competitor_analysis.ipynb'
 ENV_PATH = PROJECT_DIR / '.env'
-st.set_page_config(page_title='Competitor intelligence', page_icon='📊', layout='wide')
+st.set_page_config(page_title='Competitor intelligence', layout='wide')
 
 @st.cache_data(ttl=10, max_entries=64)
 def load_json(path_text, modified_time):
@@ -42,7 +54,7 @@ def source_markdown(ids, source_index):
         marker=(title,url)
         if marker in seen: continue
         seen.add(marker); links.append(f'[{title}]({url})' if url else title)
-    return ' · '.join(links)
+    return ' | '.join(links)
 
 def show_sources(item, source_index):
     links=source_markdown(evidence_ids(item),source_index)
