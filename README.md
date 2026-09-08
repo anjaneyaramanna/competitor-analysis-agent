@@ -43,6 +43,18 @@ jupyter lab competitor_analysis.ipynb
 
 One target company is researched per run. The workflow retains three discovered competitors for evidence and traceability. The UI displays only the competitor selected in the dropdown.
 
+## Agent roles
+
+The architecture has five logical agent roles:
+
+1. **Competitor Research Orchestrator** — plans the run, controls LangGraph routing and compiles the final briefing.
+2. **Discovery Agent** — discovers three evidence-supported competitors with You.com.
+3. **Evidence Agent** — collects pricing, features, positioning and recent-news sources.
+4. **Analysis Agent** — converts evidence into structured, cited competitor findings.
+5. **Critic Agent** — validates citations, dates and contradictions and can request one revision.
+
+Planning and compilation are two tasks performed by the same orchestrator. The Evidence Agent role is instantiated once for each discovered competitor during a run.
+
 ## Credentials and safety
 
 Credentials load from the project `.env` first and are never printed. Generated results, logs and SQLite databases stay under `.research_runs/`, which is excluded from Git. Live research uses external APIs and may incur provider charges.
