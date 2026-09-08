@@ -1,0 +1,14 @@
+# Credentials and local settings
+.env
+
+# Generated research data and checkpoints
+.research_runs/
+*.sqlite
+*.sqlite-*
+
+# Python and notebook caches
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+.venv/
+venv/
