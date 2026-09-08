@@ -80,6 +80,7 @@ def load_notebook_backend():
     exec(compile(execute_source.split(marker,1)[0],f'{NOTEBOOK_PATH.name}:cell-29-definitions','exec'),namespace)
     namespace['HERE']=PROJECT_DIR
     namespace['DATA']=DATA
+    namespace['MODEL_NAME']=os.getenv('OPENAI_MODEL','gpt-4.1-mini')
     namespace['MAX_RUN_SECONDS']=900
     return namespace
 
@@ -94,16 +95,17 @@ def execute_research(company, context, freshness, on_progress):
     backend=load_notebook_backend(); run_id=uuid4().hex
     inputs={'company':company,'context':context,'freshness':freshness,'as_of':datetime.now(timezone.utc).date().isoformat()}
     backend['start_run_budget'](backend['MAX_RUN_SECONDS'])
-    missing=[name for name in ('YOU_API_KEY',) if not os.getenv(name,'').strip()]
+    missing=[name for name in ('OPENAI_API_KEY','YOU_API_KEY') if not os.getenv(name,'').strip()]
     simulation=bool(missing)
     try:
         if simulation:
             on_progress('Credentials unavailable; starting the clearly labeled simulator.')
             result,topology,history=backend['execute_simulated_research'](run_id,inputs,progress=on_progress)
         else:
-            on_progress('Starting You.com-only competitor research.')
-            you=backend['YouResearch'](os.environ['YOU_API_KEY'])
-            result,topology,history=backend['execute_run'](run_id,you,inputs,progress=on_progress)
+            on_progress('Starting live OpenAI and You.com research.')
+            model=backend['ChatOpenAI'](model=backend['MODEL_NAME'],timeout=backend['REQUEST_TIMEOUT'][1],max_retries=0)
+            search=backend['YouSearch'](os.environ['YOU_API_KEY'])
+            result,topology,history=backend['execute_run'](run_id,model,search,inputs,progress=on_progress)
         exported_status='simulated' if simulation else ('completed' if result.get('status')=='complete' else 'needs_review')
         mode='simulation' if simulation else 'live'
         save_json_atomic(DATA/f'{run_id}.json',result)
