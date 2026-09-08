@@ -120,6 +120,15 @@ def execute_research(company, context, freshness, on_progress):
         save_json_atomic(DATA/f'{run_id}_status.json',{'status':'failed','code':failure.code,'message':message,'run_id':run_id,'company':company,'updated_at':datetime.now(timezone.utc).isoformat()})
         return {'status':'failed','run_id':run_id,'message':message}
 
+def short_text(value, limit=260):
+    text = ' '.join(str(value or '').split())
+    if not text:
+        return 'Not available.'
+    if len(text) <= limit:
+        return text
+    clipped = text[:limit].rsplit(' ', 1)[0]
+    return clipped + '...'
+
 def run_ids():
     return sorted({path.stem for path in DATA.glob('*.json') if not path.name.startswith('_') and not path.name.endswith('_status.json')},key=lambda value:(DATA/f'{value}.json').stat().st_mtime,reverse=True)
 
@@ -189,24 +198,39 @@ with st.container(horizontal=True):
     st.metric('Selected competitor',selected_name,border=True)
     st.metric('Status',status.replace('_',' ').title(),border=True)
     st.metric('As of',str(state.get('as_of') or 'Unknown'),border=True)
-competitor_record=next((item for item in state.get('competitors',[]) if str(item.get('name'))==selected_name),{})
+
+pricing_summary = short_text((analysis.get('pricing') or {}).get('value'))
+positioning_summary = short_text((analysis.get('positioning') or {}).get('value'))
+feature_values = [short_text(item.get('value'), 150) for item in (analysis.get('features') or [])[:2]]
+news_items = analysis.get('recent_news') or []
+news_summary = short_text(news_items[0].get('value'), 220) if news_items else 'No recent news was captured.'
 with st.container(border=True):
-    st.header(selected_name)
-    website=str(competitor_record.get('website') or '').strip()
-    if website: st.markdown(f':material/language: [{website}]({website})')
-    rationale=str(competitor_record.get('rationale') or '').strip()
-    if rationale: st.write(rationale); show_sources(competitor_record,source_index)
-for heading,key in [('Pricing','pricing'),('Market positioning','positioning')]:
+    st.subheader('Quick summary')
+    st.markdown(f'**{selected_name}** is being evaluated as a competitor to **{target_company}**.')
+    st.markdown(f'- **Pricing:** {pricing_summary}')
+    st.markdown(f'- **Positioning:** {positioning_summary}')
+    st.markdown(f'- **Key capabilities:** {"; ".join(feature_values) if feature_values else "No core features were captured."}')
+    st.markdown(f'- **Latest news:** {news_summary}')
+
+with st.expander('Detailed analysis', expanded=False):
+    competitor_record=next((item for item in state.get('competitors',[]) if str(item.get('name'))==selected_name),{})
     with st.container(border=True):
-        st.subheader(heading); item=analysis.get(key) or {}; st.write(item.get('value') or f'{heading} information was not available.'); show_sources(item,source_index)
-with st.container(border=True):
-    st.subheader('Core features'); features=analysis.get('features') or []
-    if not features: st.info('No core features were captured.')
-    for feature in features: st.markdown(f'- {feature.get("value") or "Feature details unavailable."}'); show_sources(feature,source_index)
-with st.container(border=True):
-    st.subheader('Recent news'); news=analysis.get('recent_news') or []
-    if not news: st.info('No recent news was captured for this competitor.')
-    for index,item in enumerate(news,1): st.markdown(f'**{index}.** {item.get("value") or "News details unavailable."}'); show_sources(item,source_index)
+        st.header(selected_name)
+        website=str(competitor_record.get('website') or '').strip()
+        if website: st.markdown(f':material/language: [{website}]({website})')
+        rationale=str(competitor_record.get('rationale') or '').strip()
+        if rationale: st.write(rationale); show_sources(competitor_record,source_index)
+    for heading,key in [('Pricing','pricing'),('Market positioning','positioning')]:
+        with st.container(border=True):
+            st.subheader(heading); item=analysis.get(key) or {}; st.write(item.get('value') or f'{heading} information was not available.'); show_sources(item,source_index)
+    with st.container(border=True):
+        st.subheader('Core features'); features=analysis.get('features') or []
+        if not features: st.info('No core features were captured.')
+        for feature in features: st.markdown(f'- {feature.get("value") or "Feature details unavailable."}'); show_sources(feature,source_index)
+    with st.container(border=True):
+        st.subheader('Recent news'); news=analysis.get('recent_news') or []
+        if not news: st.info('No recent news was captured for this competitor.')
+        for index,item in enumerate(news,1): st.markdown(f'**{index}.** {item.get("value") or "News details unavailable."}'); show_sources(item,source_index)
 review=state.get('review') or {}; issues=[str(item) for item in review.get('issues',[]) if item]; gaps=[str(item) for item in analysis.get('gaps',[]) if item]
 if issues or gaps:
     with st.expander('Review notes and research gaps'):
